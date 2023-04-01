@@ -5,9 +5,9 @@ import math
 def logprior(w, b):
     #stddev = 1, mean = 0
     lp = 0
-    for i in range(len(w)):
-        lp -= np.sum(w[i]**2)
-        lp -= b[i]**2
+    for weight, bias in zip(w, b):
+        lp -= np.sum(weight**2)
+        lp -= np.sum(bias**2)
     return lp/2
 
 def loglikelihood(bnn, w, b, x, y):
@@ -18,7 +18,7 @@ def loglikelihood(bnn, w, b, x, y):
     y_pred  = bnn.forward(x, w, b)
     ll = 0
     for y_true, y_p in zip(y, y_pred):
-        ll -= y_true*math.log(y_p) + (1-y_true)*math.log(1-y_p)
+        ll += y_true*math.log(y_p) + (1-y_true)*math.log(1-y_p)
     return ll
 
 def logposterior(bnn, w, b, x, y):
@@ -29,36 +29,39 @@ def transition(w, b):
     #b is a list of biases
     #returns a list of weights and a list of biases
     #stddev = 1, mean = 0
-    w_new = np.zeros(w.shape)
-    b_new = np.zeros(b.shape)
+    w_new = []
+    b_new = []
 
-    for i in range(len(w)):
-        w_new[i] = w[i] + np.random.randn(w[i].shape)
-        b_new = b[i] + np.random.randn(b[i].shape)
+    for wi, bi in zip(w, b):
+        wn = wi + np.random.normal(0, 1, wi.shape)
+        bn = bi + np.random.normal(0, 1, bi.shape)
+        w_new.append(wn)
+        b_new.append(bn)
 
     return w_new, b_new
 
 
 def metropolis_hastings(bnn, w, b, x, y, n_samples=100, n_burn=10):
     accepted = 0
+    rejected = 0
     samples = []
     while accepted <= n_samples + n_burn:
         w_new, b_new = transition(w, b)
-        logposterior_old = logposterior(bnn, w, b, x, y)
-        logposterior_new = logposterior(bnn, w_new, b_new, x, y)
-        if logposterior_new > logposterior_old:
+
+        prob = min(0, (logprior(w_new, b_new) + loglikelihood(bnn, w_new, b_new, x, y)) - (logprior(w, b) + loglikelihood(bnn, w, b, x, y)))
+
+        r = np.random.uniform(0, 1, 1)
+        r = math.log(r)
+
+        if r < prob:
             w = w_new
             b = b_new
             accepted += 1
+            print("Accepted: ", accepted)
             samples.append((w, b))
-        else: 
-            r = np.random.uniform(0, 1, 1)
-            r = np.log(r)
-            if r < np.exp(logposterior_new - logposterior_old):
-                w = w_new
-                b = b_new
-                accepted += 1
-                samples.append((w, b))
+        else:
+            rejected += 1
+            print("Rejected: ", rejected)
 
     return samples[n_burn:]
 

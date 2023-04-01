@@ -3,32 +3,33 @@ import numpy as np
 def generate_data(n_samples=1000):
     X = []
     Y = []
-    for i in range(n_samples):
-        x1 = np.random.uniform(0, 1, 1)
-        x2 = np.random.uniform(0, 1, 1)
-        if x1<0.5 and x2>=0.5:
-            y = 1
-        elif x1>=0.5 and x2<0.5:
-            y = 1
-        else:
-            y = 0
-        X.append([x1, x2])
-        Y.append(y)
 
+    for _ in range(n_samples):
+        x_i = np.random.uniform(0, 1, 2)
+        if x_i[0]<0.5 and x_i[1]>=0.5:
+            y_i = 1
+        elif x_i[0]>=0.5 and x_i[1]<0.5:
+            y_i = 1
+        else:
+            y_i = 0
+        
+        X.append(x_i)
+        Y.append(y_i)
+
+    X = np.stack(X)
+    Y = np.array(Y)
     return X, Y
 
 
 def acc(model, samples, x, y):
     n_samples = len(samples)
-    n_correct = 0
     y_pred = np.zeros(len(y))
-    for i in range(n_samples):
-        w = samples[i][0]
-        b = samples[i][1]
-        y_pred += model.forward(x, w, b)
+
+    for sample in samples:
+        w = sample[0]
+        b = sample[1]
+        y_pred = y_pred + model.forward(x, w, b).flatten()
+
     y_pred = y_pred/n_samples
-    if(y_pred>=0.5):
-        y_pred = 1
-    else:
-        y_pred = 0
-    return np.sum(y_pred==y)/len(y)
+    y_pred = np.round(y_pred)
+    return np.sum(y_pred==y)/y.shape[0]
